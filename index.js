@@ -1,13 +1,14 @@
-
 const TelegramBot = require('node-telegram-bot-api');
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
 const dotenv = require('dotenv');
+const axios = require('axios');
+
 dotenv.config();
 
 const TOKEN = process.env.TOKEN;
 const MODEL_NAME = process.env.MODEL_NAME;
 const API_KEY = process.env.API_KEY;
-
+const RAPIDAPI_KEY = process.env.RAPID_KEY;
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
@@ -63,4 +64,37 @@ bot.on('message', async (msg) => {
         console.error('Error:', error);
         bot.sendMessage(chatId, 'Sorry, an error occurred while processing your request.');
     }
+
+    try {
+      const options = {
+          method: 'GET',
+          url: 'https://jsearch.p.rapidapi.com/search',
+          params: {
+              query: 'Python developer ',
+              page: '1',
+              num_pages: '1'
+          },
+          headers: {
+              'X-RapidAPI-Key': RAPIDAPI_KEY,
+              'X-RapidAPI-Host': 'jsearch.p.rapidapi.com'
+          }
+      };
+      const response = await axios.request(options);
+      const jobs = response.data.data;
+      if (jobs.length === 0) {
+          bot.sendMessage(chatId, 'No jobs found.');
+      } else {
+          jobs.forEach((jobData, index) => {
+              const jobTitle = jobData.job_title;
+              const company = jobData.employer_name;
+              const applyLink = jobData.job_apply_link;
+              const message = `Job ${index + 1} / ${jobs.length}:\nTitle: ${jobTitle}\nCompany: ${company}\nApply here: ${applyLink}`;
+              bot.sendMessage(chatId, message);
+          });
+      }
+  } catch (error) {
+      console.error(error);
+  }
+  
+  
 });
